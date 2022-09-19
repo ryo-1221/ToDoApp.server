@@ -2,24 +2,26 @@ const { v4: uuidv4 } = require('uuid');
 
 var express = require('express');
 var router = express.Router();
-const { todo: sql } = require('../sql/queryFile'); // sql for todo.js;
+// const { todo: sql } = require('../sql/queryFile'); // sql for todo.js;
 // DB設定を読み込み
-const { db, execute } = require('../db/config');
+const { db, execute, sql } = require('../db/config');
 
 try {
   router.get('/', async (req, res, next) => {
     console.log(`GET /todo ToDoデータ全取得開始`);
+
     // SQL結果取得用
     let results;
     // todoのリスト取得
-    results = await execute(db, sql.getList);
+    results = await execute(db, sql('todo', 'getList'));
+    console.log(results);
     let todoList = [];
     todoList = results;
     // タスクリスト取得
-    results = await execute(db, sql.getTask);
+    results = await execute(db, sql('todo', 'getTask'));
     let taskList = results;
     // タブのヘッダー情報取得
-    results = await execute(db, sql.getTabsHeader);
+    results = await execute(db, sql('todo', 'getTabsHeader'));
     let tabsID = results;
 
     // 表示用にデータを整形
@@ -54,7 +56,8 @@ try {
     };
     console.log(param);
     // タスク名変更
-    results = await execute(db, sql.updateTaskTitle, param);
+    // results = await execute(db, sql.updateTaskTitle, param);
+    results = await execute(db, sql('todo', 'updateTaskTitle'), param);
     res.status(200).json();
     console.log(`PUT /todo/task タスク名変更終了`);
   });
@@ -69,7 +72,8 @@ try {
       listTitle: req.body.data.listTitle,
     };
     // リスト名変更
-    results = await execute(db, sql.updateListName, param);
+    // results = await execute(db, sql.updateListName, param);
+    results = await execute(db, sql('todo', 'updateListName'), param);
     console.log(`リスト名を${param.listTitle}にUPDATE`);
     res.status(200).json();
     console.log(`PUT /todo/listName リスト名変更終了`);
@@ -93,7 +97,8 @@ try {
       task_id: task_id,
       list_id: list_id,
     };
-    results = await execute(db, sql.createNewTask, param);
+    // results = await execute(db, sql.createNewTask, param);
+    results = await execute(db, sql('todo', 'createNewTask'), param);
     console.log(`新規タスク追加：${task_id}`);
 
     // デフォルトのノートデータ作成
@@ -103,11 +108,11 @@ try {
       task_id: task_id,
       note_title: '概要',
     };
-    results = await execute(db, sql.createNewNote, param);
+    // results = await execute(db, sql.createNewNote, param);
+    results = await execute(db, sql('todo', 'createNewNote'), param);
     console.log(`新規ノート作成:`, results[0]);
 
     // データ取得
-
     res.status(200).json({
       id: results[0].id,
       task_title: results[0].task_title,
@@ -123,7 +128,8 @@ try {
       list_id: listId,
     };
     // 新規リスト追加
-    results = await execute(db, sql.createNewList, param);
+    // results = await execute(db, sql.createNewNote, param);
+    results = await execute(db, sql('todo', 'createNewList'), param);
     console.log(results);
     console.log(`新規リスト追加：${results[0].id}`);
     res.status(200).json({
@@ -140,7 +146,8 @@ try {
     const param = {
       note_id: req.params.tab_id,
     };
-    results = await execute(db, sql.getNoteContents, param);
+    // results = await execute(db, sql.getNoteContents, param);
+    results = await execute(db, sql('todo', 'getNoteContents'), param);
     console.log(results);
     res.status(200).json({
       noteContents: results[0],
@@ -156,7 +163,8 @@ try {
       content_json: req.body.data.content_json,
     };
     // リスト名変更
-    results = await execute(db, sql.updateNoteContent, param);
+    // results = await execute(db, sql.updateNoteContent, param);
+    results = await execute(db, sql('todo', 'updateNoteContent'), param);
     // console.log(`リスト名を${param.listTitle}にUPDATE`);
     res.status(200).json();
     console.log(`PUT /todo/note ノートの中身更新終了`);
@@ -173,7 +181,8 @@ try {
       note_title: '新規ノート',
     };
     // 新規ノート登録
-    results = await execute(db, sql.createNewNote, param);
+    // results = await execute(db, sql.createNewNote, param);
+    results = await execute(db, sql('todo', 'createNewNote'), param);
     console.log(`新規ノート登録：${results[0].id}`);
     res.status(200).json({
       task_id: results[0].task_id,
@@ -187,8 +196,6 @@ try {
   // タブ名更新
   router.put('/tabName/:tab_id', async (req, res, next) => {
     console.log(`PUT /todo/tab タブ名更新開始`);
-    console.log(req.body);
-
     const param = {
       note_id: req.params.tab_id,
       note_title: req.body.data.tab_title,
@@ -197,7 +204,8 @@ try {
     let results = [];
     if (param.type === 'note') {
       // ノートの名称更新
-      results = await execute(db, sql.updateNoteTitle, param);
+      // results = await execute(db, sql.updateNoteTitle, param);
+      results = await execute(db, sql('todo', 'updateNoteTitle'), param);
     }
     console.log(results);
     console.log(`ノート名を${results[0].note_title}にUPDATE`);
@@ -205,10 +213,22 @@ try {
     console.log(`PUT /todo/tabName タブ名更新終了`);
   });
 
+  // リスト削除
+  router.delete('/list/:list_id', async (req, res, next) => {
+    console.log(`DELETE /todo/list リスト削除開始`);
+    const param = {
+      list_id: req.params.list_id,
+    };
+    // let results = await execute(db, sql.deleteList, param);
+    let results = await execute(db, sql('todo', 'deleteList'), param);
+    console.log(`リスト削除：${results.length}件`);
+    res.status(200).json();
+    console.log(`DELETE /todo/list リスト削除終了`);
+  });
+
   // タブ削除
   router.delete('/tab/:tab_id', async (req, res, next) => {
     console.log(`DELETE /todo/tab タブ削除開始`);
-    console.log(req.body);
     const param = {
       note_id: req.params.tab_id,
       type: req.body.data.type,
@@ -216,12 +236,25 @@ try {
     let results = [];
     if (param.type === 'note') {
       // ノート削除
-      results = await execute(db, sql.deleteNote, param);
+      // results = await execute(db, sql.deleteNote, param);
+      results = await execute(db, sql('todo', 'deleteNote'), param);
     }
-    console.log(results);
     console.log(`ノート削除：${results.length}件`);
     res.status(200).json();
     console.log(`DELETE /todo/tab タブ削除終了`);
+  });
+
+  // カード削除
+  router.delete('/task/:task_id', async (req, res, next) => {
+    console.log(`DELETE /todo/task カード削除開始`);
+    const param = {
+      task_id: req.params.task_id,
+    };
+    // let results = await execute(db, sql.deleteTask, param);
+    let results = await execute(db, sql('todo', 'deleteTask'), param);
+    console.log(`カード削除：${results.length}件`);
+    res.status(200).json();
+    console.log(`DELETE /todo/task カード削除終了`);
   });
 } catch (error) {
   console.log(error);
