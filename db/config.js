@@ -14,7 +14,7 @@ const cn = {
   // see https://github.com/vitaly-t/pg-promise#library-de-initialization
   allowExitOnIdle: true,
 };
-console.log(cn);
+// console.log(cn);
 const db = pgp(cn); // database instance;
 // console.log(db.connect());
 module.exports.db = db;
@@ -34,7 +34,6 @@ module.exports.sql = sql;
 // DBへのクエリ実行
 const execute = async (db, sql, param) => {
   console.log('クエリ実行');
-  console.log('param:', param);
   const results = await db.any(sql, param);
   return JSON.parse(JSON.stringify(results));
 };

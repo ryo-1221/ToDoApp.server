@@ -19,7 +19,6 @@ var app = express();
 
 app.use(logger('dev'));
 
-
 // jsonオブジェクトを認識できるようになる。
 app.use(express.json());
 // 配列や入れ子構造が認識できるようになる。
@@ -29,7 +28,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // CORS許可設定
 app.use(function (req, res, next) {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Authorization, username, Accept');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS'); // ← コレがないとPUTできない
   next();
 });

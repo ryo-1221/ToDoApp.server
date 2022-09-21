@@ -4,6 +4,8 @@ getList:
       ,coalesce(todo_list.list_title,'') as list_title
     FROM
       todo_list
+    WHERE
+      todo_list.user_id = $/user_id/
     ORDER BY
       todo_list.list_index
 
@@ -14,6 +16,8 @@ getTask:
       ,tasks.task_title
       ,TO_CHAR(tasks.dead_line,'yyyy/mm/dd HH24:mi') as dead_line
     FROM tasks
+    WHERE
+      tasks.user_id = $/user_id/
     ORDER BY tasks.task_index
 
 getTabsHeader:
@@ -37,6 +41,7 @@ updateTaskTitle:
       update_timestamp = current_timestamp
     where 
       id = $/task_id/
+      and user_id = $/user_id/
 
 updateListName:
   - update 
@@ -46,12 +51,14 @@ updateListName:
       update_timestamp = current_timestamp
     where 
       id = $/listId/
+      and user_id = $/user_id/
 
 createNewTask:
   - insert 
-    into tasks (id, task_index, list_id, task_title, dead_line, is_completed, create_timestamp, update_timestamp) 
+    into tasks (id, user_id, task_index, list_id, task_title, dead_line, is_completed, create_timestamp, update_timestamp) 
     values ( 
         $/task_id/
+        ,$/user_id/
         , 1
         , $/list_id/
         , '<新規カード>'
@@ -64,9 +71,10 @@ createNewTask:
 
 createNewNote:
   - insert 
-    into notes(id, task_id, note_title,content_json, create_timestamp, update_timestamp) 
+    into notes(id, user_id, task_id, note_title,content_json, create_timestamp, update_timestamp) 
     values ( 
         $/note_id/
+        ,$/user_id/
         , $/task_id/
         , $/note_title/
         , '{}'
@@ -77,9 +85,10 @@ createNewNote:
 
 createNewList:
   - insert 
-    into todo_list(id, list_index, list_title, create_timestamp, update_timestamp) 
+    into todo_list(id, user_id, list_index, list_title, create_timestamp, update_timestamp) 
     values ( 
         $/list_id/
+        ,$/user_id/
         , (select coalesce( MAX(list_index) , 0) + 1 from todo_list)
         , ''
         ,current_timestamp
@@ -95,6 +104,7 @@ getNoteContents:
     FROM notes
     WHERE
       notes.id = $/note_id/
+      AND notes.user_id = $/user_id/
 
 updateNoteContent:
   - update 
@@ -104,6 +114,7 @@ updateNoteContent:
       update_timestamp = current_timestamp
     where 
       id = $/note_id/
+      and user_id = $/user_id/
 
 updateNoteTitle:
   - update 
@@ -118,14 +129,17 @@ updateNoteTitle:
 deleteList:
   - delete from todo_list
     where id = $/list_id/
+          and user_id = $/user_id/
     returning *
 
 deleteNote:
   - delete from notes
     where id = $/note_id/
+          and user_id = $/user_id/
     returning *
 
 deleteTask:
   - delete from tasks
     where id = $/task_id/
+          and user_id = $/user_id/
     returning *

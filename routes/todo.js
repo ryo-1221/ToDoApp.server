@@ -1,27 +1,38 @@
 const { v4: uuidv4 } = require('uuid');
+const jwt_decode = require('jwt-decode');
 
 var express = require('express');
 var router = express.Router();
 // const { todo: sql } = require('../sql/queryFile'); // sql for todo.js;
 // DB設定を読み込み
+console.log('aaa');
 const { db, execute, sql } = require('../db/config');
+console.log('bbb');
 
 try {
+  let userId = '';
+  console.log('ccc');
+  // 全てのリクエストに対して前処理
+  router.use('/*', function (req, res, next) {
+    userId = req.headers.username;
+    next(); // 個別処理へ
+  });
+
   router.get('/', async (req, res, next) => {
     console.log(`GET /todo ToDoデータ全取得開始`);
 
     // SQL結果取得用
     let results;
     // todoのリスト取得
-    results = await execute(db, sql('todo', 'getList'));
+    results = await execute(db, sql('todo', 'getList'), { user_id: userId });
     console.log(results);
     let todoList = [];
     todoList = results;
     // タスクリスト取得
-    results = await execute(db, sql('todo', 'getTask'));
+    results = await execute(db, sql('todo', 'getTask'), { user_id: userId });
     let taskList = results;
     // タブのヘッダー情報取得
-    results = await execute(db, sql('todo', 'getTabsHeader'));
+    results = await execute(db, sql('todo', 'getTabsHeader'), { user_id: userId });
     let tabsID = results;
 
     // 表示用にデータを整形
@@ -52,7 +63,8 @@ try {
     console.log(`PUT /todo/task タスク名変更開始`);
     const param = {
       task_id: req.params.id,
-      task_title: req.body.data.task_title,
+      task_title: req.body.task_title,
+      user_id: userId,
     };
     console.log(param);
     // タスク名変更
@@ -66,10 +78,11 @@ try {
   router.put('/listName/:listId', async (req, res, next) => {
     console.log(`PUT /todo/listName リスト名変更開始`);
     // console.log(req.params);
-    // console.log(req.body.data);
+    // console.log(req.body);
     const param = {
       listId: req.params.listId,
-      listTitle: req.body.data.listTitle,
+      listTitle: req.body.listTitle,
+      user_id: userId,
     };
     // リスト名変更
     // results = await execute(db, sql.updateListName, param);
@@ -82,12 +95,12 @@ try {
   // 新規タスク追加
   router.post('/task', async (req, res, next) => {
     console.log(`POST /todo/task 新規タスク追加`);
-    const list_id = req.body.data.list_id;
+    const list_id = req.body.list_id;
     // 既存タスクのインデックスを1つ後ろにずらす
     results = await execute(
       db,
-      'update tasks set task_index = task_index + 1 where list_id = $/list_id/ returning *;',
-      { list_id: list_id }
+      'update tasks set task_index = task_index + 1 where list_id = $/list_id/ and user_id = $/user_id/ returning *;',
+      { list_id: list_id, user_id: userId }
     );
     console.log(`既存タスクのインデックスをずらす:${results.length}行`);
 
@@ -96,6 +109,7 @@ try {
     let param = {
       task_id: task_id,
       list_id: list_id,
+      user_id: userId,
     };
     // results = await execute(db, sql.createNewTask, param);
     results = await execute(db, sql('todo', 'createNewTask'), param);
@@ -107,6 +121,7 @@ try {
       note_id: note_id,
       task_id: task_id,
       note_title: '概要',
+      user_id: userId,
     };
     // results = await execute(db, sql.createNewNote, param);
     results = await execute(db, sql('todo', 'createNewNote'), param);
@@ -126,6 +141,7 @@ try {
     listId = uuidv4();
     const param = {
       list_id: listId,
+      user_id: userId,
     };
     // 新規リスト追加
     // results = await execute(db, sql.createNewNote, param);
@@ -145,6 +161,7 @@ try {
     console.log(`GET /todo/note ノートデータ取得開始`);
     const param = {
       note_id: req.params.tab_id,
+      user_id: userId,
     };
     // results = await execute(db, sql.getNoteContents, param);
     results = await execute(db, sql('todo', 'getNoteContents'), param);
@@ -160,7 +177,8 @@ try {
     console.log(`PUT /todo/note ノートの中身更新開始`);
     const param = {
       note_id: req.params.note_id,
-      content_json: req.body.data.content_json,
+      content_json: req.body.content_json,
+      user_id: userId,
     };
     // リスト名変更
     // results = await execute(db, sql.updateNoteContent, param);
@@ -176,9 +194,10 @@ try {
     note_id = uuidv4();
     console.log(req.body);
     const param = {
-      task_id: req.body.data.task_id,
+      task_id: req.body.task_id,
       note_id: note_id,
       note_title: '新規ノート',
+      user_id: userId,
     };
     // 新規ノート登録
     // results = await execute(db, sql.createNewNote, param);
@@ -189,6 +208,7 @@ try {
       id: results[0].id,
       note_title: results[0].note_title,
       type: 'note',
+      user_id: userId,
     });
     console.log(`POST /todo/note 新規ノート作成終了`);
   });
@@ -198,8 +218,9 @@ try {
     console.log(`PUT /todo/tab タブ名更新開始`);
     const param = {
       note_id: req.params.tab_id,
-      note_title: req.body.data.tab_title,
-      type: req.body.data.type,
+      note_title: req.body.tab_title,
+      type: req.body.type,
+      user_id: userId,
     };
     let results = [];
     if (param.type === 'note') {
@@ -218,6 +239,7 @@ try {
     console.log(`DELETE /todo/list リスト削除開始`);
     const param = {
       list_id: req.params.list_id,
+      user_id: userId,
     };
     // let results = await execute(db, sql.deleteList, param);
     let results = await execute(db, sql('todo', 'deleteList'), param);
@@ -227,13 +249,15 @@ try {
   });
 
   // タブ削除
-  router.delete('/tab/:tab_id', async (req, res, next) => {
+  router.delete('/tab/:type/:tab_id', async (req, res, next) => {
     console.log(`DELETE /todo/tab タブ削除開始`);
     const param = {
       note_id: req.params.tab_id,
-      type: req.body.data.type,
+      type: req.params.type,
+      user_id: userId,
     };
     let results = [];
+    console.log(param);
     if (param.type === 'note') {
       // ノート削除
       // results = await execute(db, sql.deleteNote, param);
@@ -249,6 +273,7 @@ try {
     console.log(`DELETE /todo/task カード削除開始`);
     const param = {
       task_id: req.params.task_id,
+      user_id: userId,
     };
     // let results = await execute(db, sql.deleteTask, param);
     let results = await execute(db, sql('todo', 'deleteTask'), param);
