@@ -6,7 +6,7 @@ const { join: joinPath } = require('path');
 // Helper for linking to external query files:
 function sql(file) {
   const fullPath = joinPath(__dirname, file); // generating full path;
-  return new QueryFile(fullPath, { minify: true });
+  return new QueryFile('./sql/' + file, { minify: true });
 }
 
 module.exports = {
@@ -24,6 +24,8 @@ module.exports = {
     updateNoteContent: sql('todo/updateNoteContent.sql'),
     updateNoteTitle: sql('todo/updateNoteTitle.sql'),
     deleteNote: sql('todo/deleteNote.sql'),
+    deleteList: sql('todo/deleteList.sql'),
+    deleteTask: sql('todo/deleteTask.sql'),
 
     // search: sql("users/search.sql"),
     // report: sql("users/report.sql"),

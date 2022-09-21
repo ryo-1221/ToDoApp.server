@@ -1,0 +1,145 @@
+getList:
+  - SELECT
+      todo_list.id
+      ,coalesce(todo_list.list_title,'') as list_title
+    FROM
+      todo_list
+    WHERE
+      todo_list.user_id = $/user_id/
+    ORDER BY
+      todo_list.list_index
+
+getTask:
+  - SELECT  
+      tasks.id
+      ,tasks.list_id
+      ,tasks.task_title
+      ,TO_CHAR(tasks.dead_line,'yyyy/mm/dd HH24:mi') as dead_line
+    FROM tasks
+    WHERE
+      tasks.user_id = $/user_id/
+    ORDER BY tasks.task_index
+
+getTabsHeader:
+  - select
+      tasks.id as task_id,
+      'note' as type,
+      notes.id as tab_id,
+      notes.note_title as tab_title
+    from
+      tasks
+    left join notes on
+      notes.task_id = tasks.id
+    order by
+      notes.create_timestamp
+
+updateTaskTitle:
+  - update 
+      tasks
+    set
+      task_title = $/task_title/,
+      update_timestamp = current_timestamp
+    where 
+      id = $/task_id/
+      and user_id = $/user_id/
+
+updateListName:
+  - update 
+      todo_list
+    set
+      list_title = $/listTitle/,
+      update_timestamp = current_timestamp
+    where 
+      id = $/listId/
+      and user_id = $/user_id/
+
+createNewTask:
+  - insert 
+    into tasks (id, user_id, task_index, list_id, task_title, dead_line, is_completed, create_timestamp, update_timestamp) 
+    values ( 
+        $/task_id/
+        ,$/user_id/
+        , 1
+        , $/list_id/
+        , '<新規カード>'
+        , current_timestamp 
+        , false
+        , current_timestamp
+        , current_timestamp
+    )
+    RETURNING id
+
+createNewNote:
+  - insert 
+    into notes(id, user_id, task_id, note_title,content_json, create_timestamp, update_timestamp) 
+    values ( 
+        $/note_id/
+        ,$/user_id/
+        , $/task_id/
+        , $/note_title/
+        , '{}'
+        ,current_timestamp
+        ,current_timestamp
+    )
+    RETURNING id, task_id, note_title, content_json
+
+createNewList:
+  - insert 
+    into todo_list(id, user_id, list_index, list_title, create_timestamp, update_timestamp) 
+    values ( 
+        $/list_id/
+        ,$/user_id/
+        , (select coalesce( MAX(list_index) , 0) + 1 from todo_list)
+        , ''
+        ,current_timestamp
+        ,current_timestamp
+    )
+    RETURNING id, list_title
+
+getNoteContents:
+  - SELECT  notes.id
+      ,notes.task_id
+      ,notes.note_title
+      ,notes.content_json
+    FROM notes
+    WHERE
+      notes.id = $/note_id/
+      AND notes.user_id = $/user_id/
+
+updateNoteContent:
+  - update 
+      notes
+    set
+      content_json = $/content_json/,
+      update_timestamp = current_timestamp
+    where 
+      id = $/note_id/
+      and user_id = $/user_id/
+
+updateNoteTitle:
+  - update 
+      notes
+    set
+      note_title = $/note_title/,
+      update_timestamp = current_timestamp
+    where 
+      id = $/note_id/
+    RETURNING note_title
+
+deleteList:
+  - delete from todo_list
+    where id = $/list_id/
+          and user_id = $/user_id/
+    returning *
+
+deleteNote:
+  - delete from notes
+    where id = $/note_id/
+          and user_id = $/user_id/
+    returning *
+
+deleteTask:
+  - delete from tasks
+    where id = $/task_id/
+          and user_id = $/user_id/
+    returning *
